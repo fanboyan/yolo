@@ -1,55 +1,117 @@
-import pymysql
-from configuration import config
-from utils.Match import *
-from utils.torch_utils import select_device, time_sync
 import os
-host = config.host
-username = config.username
-password = config.password
-db_name = config.db_name
-start_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-camera_id=1
-# update_sql="update equipment set visibility=0 where id= %d"%(camera_id)
-# Update_Sql(start_time, host, username, password, db_name, update_sql)
-un_time=1646
-xyxy=[1,2,3,4]
-# select_sql = "SELECT ship_height FROM equipment WHERE id = %s" % (camera_id)
-# ship_height = SELECT_Sql(host, username, password, db_name, select_sql)
-# print(ship_height[0][0])
-# baseline_id=29
-# for i in range(30 - baseline_id):
-#     print(i)
-# now_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d-%H:%M:%S')
-# now_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d-%H-%M-%S')
-# saveimages=f'./images/{now_time}.jpg'
-# print(saveimages)
-# import cv2
+import sys
+from pathlib import Path
+from configuration import config
+import torch
+import torch.backends.cudnn as cudnn
+from multiprocessing import Process
 
-# cv2.imwrite(saveimages, img3)
-# 创建文件夹
-# period = datetime.datetime.now()
-# timestr = period.strftime("%Y_%m_%d")
-# savedir_path = './images/' + str(timestr)
-# if not os.path.exists(savedir_path):
-#     os.makedirs(savedir_path)
-# imgFile = "./images/1.jpg"  # 读取文件的路径
-# img3 = cv2.imread(imgFile)  # flags=1 读取彩色图像(BGR)
-# now_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d-%H-%M-%S')
-# saveimages = f'{savedir_path}/{now_time}.jpg'
-# cv2.imwrite(saveimages, img3)
-# print(saveimages)
-# t1=time_sync()
-# print(time_sync()%1)
-# aaa=str(round(time_sync()%1,2)*100)
-# now_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d-%H-%M-%S')
-# print(f'/{now_time}-{aaa}.jpg')
+from yolo_detector import Detector
+
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[0]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+
+from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
+                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
+from utils.torch_utils import select_device, time_sync
+from utils.Match import *
+from flask import Flask,request,jsonify
+import os
+import sys
+from pathlib import Path
+from configuration import config
+import torch
+import torch.backends.cudnn as cudnn
+from multiprocessing import Process
+
+from yolo_detector import Detector
+
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[0]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+
+from models.common import DetectMultiBackend
+from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadStreams
+from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
+                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
+from utils.torch_utils import select_device, time_sync
+from utils.Match import *
+from flask import Flask,request,jsonify
 
 
-import cv2
-import numpy as np
+@torch.no_grad()
+def pre_ship_height(
+        source=None,
+        kill_time=None,
+        camera_id=None,
+):
+    host = config.host
+    username = config.username
+    password = config.password
+    db_name = config.db_name
 
-img = np.zeros([600, 600, 3])
-points = np.array([[-100, 200], [200, 300], [330, 100], [340, 300], [340, 200], [270, 130]], np.int32)
-img = cv2.polylines(img, [points], isClosed=True, color=[0, 0, 255], thickness=5)
-img = cv2.fillPoly(img, [points], color=[0, 255, 0])
-cv2.imwrite("a.jpg", img)
+    height_detect = Detector()
+    height_detect.init_model(ROOT / 'weights/buoy_day.pt')
+    height_detect.init_source(source)
+    old_time = 0
+
+    s_time = time_sync()
+    for path, im, im0s, vid_cap, s in height_detect.dataset:
+
+        now_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+
+        height_detect.inference(im)
+
+        un_time = time_sync()
+        if un_time - s_time > (kill_time * 600):
+            update_sql = "update equipment set ship_height=0 where id= %d" % camera_id
+            Update_Sql(now_time, host, username, password, db_name, update_sql)
+            LOGGER.info('超时,自动关闭')
+            return "自动关闭"
+
+        if (un_time - old_time) > 0:
+            old_time = un_time
+
+            select_sql = "SELECT ship_height FROM equipment WHERE id = %s" % (camera_id)
+            ship_height = SELECT_Sql(host, username, password, db_name, select_sql)
+
+            if ship_height[0][0] == 0:
+                LOGGER.info('ship_height=0,已关闭')
+                return "ship_height:0,已关闭"
+
+            LOGGER.info(f'当前运行时间：{un_time - s_time}')
+
+
+            for i, det in enumerate(height_detect.pred):  # per image
+
+                height_detect.pre_image(path, im0s, s, i, det)
+
+                # 判断视频是否检测出来船
+                if len(det):
+
+                    for *xyxy, conf, cls in reversed(det):
+                        # 获取视频检测框
+                        xyxy = torch.tensor(xyxy).view(-1).tolist()
+                        print(cls)
+                        LOGGER.info(f'视频检测出来的船舶,{xyxy}')
+                        insert_sql = """INSERT INTO height_detect(camera_id,post_time,min_u,max_u,min_v,max_v)
+                                                                           VALUES (%d,'%s',%d,%d,%d,%d)
+                                                                          """ % (
+                            camera_id, now_time, xyxy[0], xyxy[2], xyxy[1], xyxy[3])
+                        Insert_Sql(now_time, host, username, password, db_name, insert_sql)
+
+                        # im0 = plot_one_box(xyxy, height_detect.im0, label="ship", color=(0, 0, 255), line_thickness=3)
+
+                # height_detect.video_Show()
+
+if __name__ == '__main__':
+    # ship = Detector()
+    # ship.init_model(ROOT / 'weights/buoy_day.pt')
+    source = "https://open.ys7.com/v3/openlive/G18183870_1_2.m3u8?expire=1677567819&id=420234950509830144&t=c784a19375d066e715d175a1d68ad8146b88a84447e03c7bb751f02c43aceb0b&ev=100"
+
+    pre_ship_height(source,kill_time=1,camera_id=2)

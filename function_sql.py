@@ -77,12 +77,3 @@ def SELECT_Sql(host, username, password, db_name, select_sql):
     connect.close()
     return results
 
-#循环插入剩余
-def Remain_buy_insert(camera_id,start_time,baseline_id,visibility_id,host,username,password,db_name):
-    for i in range(30 - baseline_id):
-        insert_sql = """INSERT INTO visibility_result(camera_id,set_time,baseline_id,visibility_id,is_visibility)
-                                                                                                        VALUES (%d,'%s',%d,%d,0)
-                                                                                                        """ % (
-            camera_id, start_time, baseline_id+i+1, visibility_id)
-        Insert_Sql(start_time, host, username, password, db_name, insert_sql)
-    return 1

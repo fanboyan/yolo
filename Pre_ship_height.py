@@ -9,6 +9,8 @@ import os
 import sys
 from pathlib import Path
 
+from function_time import get_now_time
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
 if str(ROOT) not in sys.path:
@@ -19,7 +21,6 @@ import torch
 from yolo_detector import Detector
 from utils.torch_utils import time_sync
 from utils.Match import *
-
 
 
 @torch.no_grad()
@@ -41,11 +42,18 @@ def pre_ship_height(
     s_time = time_sync()
     for path, im, im0s, vid_cap, s in height_detect.dataset:
 
-        now_time = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+        #判断是否需要关闭
+        select_sql = "SELECT ship_height FROM equipment WHERE id = %s" % (camera_id)
+        ship_height = SELECT_Sql(host, username, password, db_name, select_sql)
+
+        if ship_height[0][0] == 0:
+            LOGGER.info('ship_height=0,已关闭')
+            return "ship_height:0,已关闭"
 
         height_detect.inference(im)
-
+        now_time = get_now_time()
         un_time = time_sync()
+
         if un_time - s_time > (kill_time * 600):
             update_sql = "update equipment set ship_height=0 where id= %d" % camera_id
             Update_Sql(now_time, host, username, password, db_name, update_sql)
@@ -54,13 +62,6 @@ def pre_ship_height(
 
         if (un_time - old_time) > 0:
             old_time = un_time
-
-            select_sql = "SELECT ship_height FROM equipment WHERE id = %s" % (camera_id)
-            ship_height = SELECT_Sql(host, username, password, db_name, select_sql)
-
-            if ship_height[0][0] == 0:
-                LOGGER.info('ship_height=0,已关闭')
-                return "ship_height:0,已关闭"
 
             LOGGER.info(f'当前运行时间：{un_time - s_time}')
 
@@ -74,7 +75,6 @@ def pre_ship_height(
                     for *xyxy, conf, cls in reversed(det):
                         # 获取视频检测框
                         xyxy = torch.tensor(xyxy).view(-1).tolist()
-                        print(cls)
                         LOGGER.info(f'视频检测出来的船舶,{xyxy}')
                         insert_sql = """INSERT INTO height_detect(camera_id,post_time,min_u,max_u,min_v,max_v)
                                                                            VALUES (%d,'%s',%d,%d,%d,%d)

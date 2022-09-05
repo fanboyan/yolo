@@ -333,6 +333,3 @@ def Remain_buy_insert(camera_id,start_time,baseline_id,visibility_id,host,userna
         Insert_Sql(start_time, host, username, password, db_name, insert_sql)
     return 1
 
-if __name__ == "__main__":
-
-    app.run(host="0.0.0.0", port=config.port, debug=True)

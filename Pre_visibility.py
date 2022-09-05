@@ -10,7 +10,8 @@ import os
 import sys
 from pathlib import Path
 from function_time import get_now_time, get_now_hour
-from function_visibility import judge_night, select_all_buoy
+from function_visibility import judge_night, select_all_buoy, judge_close, uodate_close, insert_history, \
+    insert_result0, insert_result1
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
@@ -56,9 +57,8 @@ def buoy_visibility(source=0,
     for path, im, im0s, vid_cap, s in buoy_detect.dataset:
 
         #判断是否需要关闭
-        select_sql = "SELECT visibility FROM equipment WHERE id = %s" % (camera_id)
-        visibility = SELECT_Sql(host, username, password, db_name, select_sql)
-        if visibility[0][0] == 0:
+        close=judge_close(camera_id)
+        if close == 0:
             LOGGER.info('visibility=0,已关闭')
             return "visibility=0,已关闭"
 
@@ -81,8 +81,7 @@ def buoy_visibility(source=0,
                 # 判断PTZ值，等待并确保摄像头转动成功
                 now_PTZ = GetPtz(camera_id=camera_id)
                 if End_countdown > 100:
-                    update_sql = "update equipment set visibility=0 where id= %d" % camera_id
-                    Update_Sql(start_time, host, username, password, db_name, update_sql)
+                    uodate_close(camera_id, start_time)
                     LOGGER.info('旋转超时，自动关闭')
                     return "旋转超时"
                 End_countdown += 1
@@ -129,19 +128,11 @@ def buoy_visibility(source=0,
                             f_conf = mean(ALL_conf)
                             LOGGER.info(f'{str(now_time)} : 检测完成，并成功识别!!!概率为：{str(f_conf)}')
 
-
-                            insert_sql = """INSERT INTO visibility_result(camera_id,set_time,baseline_id,visibility_id,is_visibility,conf)
-                                                                    VALUES (%d,'%s',%d,%d,1,%f)
-                                                                    """ % (
-                                camera_id, start_time, baseline_id, visibility_id, f_conf)
-                            Insert_Sql(start_time, host, username, password, db_name, insert_sql)
+                            insert_result1(camera_id, start_time, baseline_id, visibility_id, f_conf)
                             end_basline_id=baseline_id
 
                             # 查询是否继续
-                            select_sql = "SELECT id,visibility_id,camera_para,distance_scale FROM baseline \
-                                                                          WHERE camera_id = %s and distance_scale=%s" % (
-                                camera_id, distance_id + 1)
-                            all_buoy = SELECT_Sql(host, username, password, db_name, select_sql)
+                            all_buoy = select_all_buoy(camera_id, distance_id + 1)
 
                             if len(all_buoy) > 1:
                                 ALL_conf = []
@@ -150,24 +141,20 @@ def buoy_visibility(source=0,
                                 success_num = 0
                                 break
                             else:
-                                update_sql = "update equipment set visibility=0 where id= %d" % camera_id
-                                Update_Sql(start_time, host, username, password, db_name, update_sql)
+                                uodate_close(camera_id, start_time)
+
                                 LOGGER.info(f'{str(now_time)} : 当前航标已检测完毕，已自动关闭程序')
+
                                 if end_basline_id != 0:
-                                    insert_sql = """INSERT INTO visibility_history(camera_id,set_time,baseline_id,is_auto)
-                                                                                                            VALUES (%d,'%s',%d,%d)
-                                                                                                             """ % (
-                                        camera_id, start_time, end_basline_id, is_auto)
-                                    Insert_Sql(start_time, host, username, password, db_name, insert_sql)
+
+                                    insert_history(camera_id, start_time, end_basline_id, is_auto)
+
                                 return True
                         else:
                             LOGGER.info(f'{str(now_time)} :检测完成，识别失败')
                             ALL_conf = []
-                            insert_sql = """INSERT INTO visibility_result(camera_id,set_time,baseline_id,visibility_id,is_visibility)
-                                                                                                VALUES (%d,'%s',%d,%d,0)
-                                                                                                """ % (
-                                camera_id, start_time, baseline_id, visibility_id)
-                            Insert_Sql(start_time, host, username, password, db_name, insert_sql)
+                            insert_result0(camera_id, start_time, baseline_id, visibility_id)
+
                             if len(all_buoy)> 1:
                                 all_buoy.pop(0)
                                 LOGGER.info(f'{str(now_time)} :进行同级其他航标检测')
@@ -179,17 +166,16 @@ def buoy_visibility(source=0,
                                     if i == (distance_id - 1):
                                         End_python = True
                                 if not End_python:
-                                    select_sql = "SELECT id,visibility_id,camera_para,distance_scale FROM baseline \
-                                                                          WHERE camera_id = %s and distance_scale=%s" % (
-                                        camera_id, distance_id - 1)
-                                    all_buoy = SELECT_Sql(host, username, password, db_name, select_sql)
+
+                                    all_buoy = select_all_buoy(camera_id, distance_id - 1)
+
                                     if len(all_buoy) >= 1:
                                         Video_frames = 0
                                         success_num = 0
                                         break
                                     else:
-                                        update_sql = "update equipment set visibility=0 where id= %d" % (camera_id)
-                                        Update_Sql(start_time, host, username, password, db_name, update_sql)
+                                        uodate_close(camera_id, start_time)
+
                                         LOGGER.info(f'{str(now_time)} : 当前航标已检测完毕，已自动关闭程序')
 
                                         Remain_buy_insert(camera_id, start_time, baseline_id, visibility_id, host,

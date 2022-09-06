@@ -10,7 +10,6 @@ from camera.function_sql import SELECT_Sql, Update_Sql, Insert_Sql
 from configuration import config
 from utils.general import LOGGER
 
-
 def judge_night(night_time):
     if int(night_time) > 20 or 0 <= int(night_time) <= 5:
         weights = 'weights/buoy_night.pt'

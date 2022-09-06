@@ -9,7 +9,6 @@
 from configuration import config
 from camera.function_sql import SELECT_Sql, Update_Sql, Insert_Sql
 
-
 # 判断传入参数是否正确
 def check_parameters_height(camera_id):
 

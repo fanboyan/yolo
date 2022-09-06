@@ -8,26 +8,18 @@
 import os
 import sys
 from pathlib import Path
-
 import cv2
-
-from configuration import config
 import torch
 import torch.backends.cudnn as cudnn
-from multiprocessing import Process
-
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
-
 from models.common import DetectMultiBackend
-from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadStreams
-from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
-                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
-from utils.torch_utils import select_device, time_sync
-from flask import Flask,request,jsonify
+from utils.datasets import LoadStreams
+from utils.general import ( check_img_size,  non_max_suppression,scale_coords)
+from utils.torch_utils import select_device
 
 class Detector(object):
     "yolo detect"
@@ -46,12 +38,6 @@ class Detector(object):
         self.half = False  # use FP16 half-precision inference
         self.dnn = False  # use OpenCV DNN for ONNX inference
         self.device = ''
-        #inference pre
-        # self.path=None
-        # self.im=None
-        # self.im0s=None
-        # self.vid_cap=None
-        # self.s=None
 
     def init_model(self,weights):
         self.weights = weights  # model.pt path(s)
@@ -76,10 +62,6 @@ class Detector(object):
         self.dataset = LoadStreams(source, img_size=self.imgsz, stride=self.stride, auto=self.pt)
 
     def inference(self,im):
-        # self.path=path
-        # self.im0s=im0s
-        # self.vid_cap=vid_cap
-        # self.s=s
         self.im = torch.from_numpy(im).to(self.device)
         self.im = self.im.ship.half() if self.half else self.im.float()  # uint8 to fp16/32
         self.im /= 255  # 0 - 255 to 0.0 - 1.0
@@ -102,22 +84,3 @@ class Detector(object):
 
         cv2.imshow(str(self.p), self.im0)
         cv2.waitKey(1)  # 1 millisecond
-# if __name__ == '__main__':
-    # ship = Detector()
-    # ship.init_model(ROOT / 'weights/buoy_day.pt')
-    # source="https://open.ys7.com/v3/openlive/G18183870_1_2.m3u8?expire=1677567819&id=420234950509830144&t=c784a19375d066e715d175a1d68ad8146b88a84447e03c7bb751f02c43aceb0b&ev=100"
-    #
-    # ship.init_source(source)
-    # for path, im, im0s, vid_cap, s in ship.dataset:
-    #
-    #     ship.inference(im)
-    #
-    #     for i, det in enumerate(ship.pred):  # per image
-    #         ship.pre_image(path, im0s, s, i, det)
-    #
-    #         cv2.imshow(str(ship.p), ship.im0)
-    #         cv2.waitKey(1)  # 1 millisecond
-    #         for *xyxy, conf, cls in reversed(det):
-    #             # 获取视频检测框
-    #             xyxy = torch.tensor(xyxy).view(-1).tolist()
-    #             print(xyxy)

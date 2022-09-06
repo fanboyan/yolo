@@ -36,7 +36,7 @@ def pre_ship_height(
         height_detect.inference(im)
         now_time = get_now_time()
         un_time = time_sync()
-        if un_time - s_time > (kill_time * 600):
+        if un_time - s_time > (kill_time * 60):
             uodate_close(camera_id, now_time)
             LOGGER.info('自动关闭')
             return "自动关闭"

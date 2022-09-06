@@ -8,6 +8,9 @@
 import os
 import sys
 from pathlib import Path
+
+import cv2
+
 from configuration import config
 import torch
 import torch.backends.cudnn as cudnn
@@ -24,7 +27,6 @@ from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadStreams
 from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
                            increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
 from utils.torch_utils import select_device, time_sync
-from utils.Match import *
 from flask import Flask,request,jsonify
 
 class Detector(object):

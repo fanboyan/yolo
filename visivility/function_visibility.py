@@ -5,8 +5,8 @@
 # @FileName: function_visibility.py
 # @Software: PyCharm
 # @Email   : 812008450@qq.com
-from function_camera import SetPtz, GetPtz
-from function_sql import SELECT_Sql, Update_Sql, Insert_Sql
+from camera.function_camera import SetPtz, GetPtz
+from camera.function_sql import SELECT_Sql, Update_Sql, Insert_Sql
 from configuration import config
 from utils.general import LOGGER
 

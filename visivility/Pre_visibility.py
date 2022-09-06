@@ -6,23 +6,16 @@
 # @Software: PyCharm
 # @Email   : 812008450@qq.com
 
-import os
-import sys
 import time
-from pathlib import Path
 from numpy import mean
-from function_time import get_now_time, get_now_hour
-from function_visibility import judge_night, select_all_buoy, judge_close, uodate_close, insert_history, \
+from camera.function_time import get_now_time, get_now_hour
+from visivility.function_visibility import judge_night, select_all_buoy, judge_close, uodate_close, insert_history, \
     insert_result0, insert_result1, ultimately, rotate
 from utils.general import LOGGER
-from visibility_settings import Visibility_settings
+from visivility.visibility_settings import Visibility_settings
 import torch
 from yolo_detector import Detector
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to PATH
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+
 
 @torch.no_grad()
 def buoy_visibility(source=0,
@@ -30,7 +23,10 @@ def buoy_visibility(source=0,
            disatance_scale=None,
            camera_id=None,
            is_auto=None,
-           kill_time=None):
+           kill_time=None,
+            ROOT = None
+
+):
     settings=Visibility_settings()
     night_time = get_now_hour()
     night,weights,end_frames=judge_night(night_time)

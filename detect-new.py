@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2022/9/1 17:17
 # @Author  : YAN
-# @FileName: detect-901.py
+# @FileName: detect-new.py
 # @Software: PyCharm
 # @Email   : 812008450@qq.com
 import os
 import sys
 from pathlib import Path
-from Pre_visibility import buoy_visibility
+from visivility.Pre_visibility import buoy_visibility
 from configuration import config
 from multiprocessing import Process
-from Pre_ship_height import pre_ship_height
-from function_camera import select_url
-from function_height import check_parameters_height, update_switch_height
-from function_time import get_now_time
-from function_visibility import check_parameters_visibility,update_switch_visibility
+from height.Pre_ship_height import pre_ship_height
+from camera.function_camera import select_url
+from height.function_height import check_parameters_height, update_switch_height
+from camera.function_time import get_now_time
+from visivility.function_visibility import check_parameters_visibility,update_switch_visibility
 from flask import Flask,request
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
@@ -44,7 +44,7 @@ def visibility():
         #visibility更新
         update_switch_visibility(start_time, camera_id)
         # 开始执行
-        t = Process(target=buoy_visibility, args=(video_url[0][0], start_time, distance, camera_id,is_auto, kill_time))
+        t = Process(target=buoy_visibility, args=(video_url[0][0], start_time, distance, camera_id,is_auto, kill_time,ROOT))
         t.start()
         return "0"
     else:
@@ -64,7 +64,7 @@ def ship_Height():
         start_time =get_now_time()
         update_switch_height(start_time,camera_id)
         # 开始执行
-        t = Process(target=pre_ship_height, args=(video_url[0][0], kill_time, camera_id))
+        t = Process(target=pre_ship_height, args=(video_url[0][0], kill_time, camera_id,ROOT))
         t.start()
         return "0"
     else:

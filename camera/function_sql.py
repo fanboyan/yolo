@@ -6,16 +6,7 @@
 # @Software: PyCharm
 # @Email   : 812008450@qq.com
 
-import datetime
-import requests
-import json
-from numpy import *
-from random import random
-import cv2
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 import pymysql
-import time
 from utils.general import LOGGER
 
 # 插入数据库

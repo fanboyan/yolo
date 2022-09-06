@@ -18,7 +18,7 @@ import pymysql
 import time
 
 from configuration import config
-from function_sql import SELECT_Sql
+from camera.function_sql import SELECT_Sql
 from utils.general import LOGGER
 
 # setPTZ 卡达凯斯

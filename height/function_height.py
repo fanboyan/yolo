@@ -7,7 +7,7 @@
 # @Email   : 812008450@qq.com
 
 from configuration import config
-from function_sql import SELECT_Sql, Update_Sql, Insert_Sql
+from camera.function_sql import SELECT_Sql, Update_Sql, Insert_Sql
 
 
 # 判断传入参数是否正确

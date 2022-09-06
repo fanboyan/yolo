@@ -5,17 +5,9 @@
 # @FileName: Pre_ship_height.py
 # @Software: PyCharm
 # @Email   : 812008450@qq.com
-import os
-import sys
-from pathlib import Path
-from function_height import judge_close, uodate_close, insert_detect
-from function_time import get_now_time
-from height_settings import Height_settings
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to PATH
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+from height.function_height import judge_close, uodate_close, insert_detect
+from camera.function_time import get_now_time
+from height.height_settings import Height_settings
 import torch
 from yolo_detector import Detector
 from utils.torch_utils import time_sync
@@ -26,6 +18,7 @@ def pre_ship_height(
         source=None,
         kill_time=None,
         camera_id=None,
+        ROOT=None
 ):
     settings = Height_settings()
     height_detect = Detector()
